@@ -1,0 +1,5 @@
+<Solution>
+  <Folder Name="/CWAPI/">
+    <Project Path="CWAPI/CWAPI.csproj" />
+  </Folder>
+</Solution>
