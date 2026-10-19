@@ -1,0 +1,6 @@
+C:\Users\K2\Documents\All K2's Stuff\Cursed Words Stuff\Cursed Words Mods\CW API\CWAPI\obj\Debug\netstandard2.1\CWAPI.csproj.AssemblyReference.cache
+C:\Users\K2\Documents\All K2's Stuff\Cursed Words Stuff\Cursed Words Mods\CW API\CWAPI\obj\Debug\netstandard2.1\CWAPI.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\K2\Documents\All K2's Stuff\Cursed Words Stuff\Cursed Words Mods\CW API\CWAPI\obj\Debug\netstandard2.1\CWAPI.AssemblyInfoInputs.cache
+C:\Users\K2\Documents\All K2's Stuff\Cursed Words Stuff\Cursed Words Mods\CW API\CWAPI\obj\Debug\netstandard2.1\CWAPI.AssemblyInfo.cs
+C:\Users\K2\Documents\All K2's Stuff\Cursed Words Stuff\Cursed Words Mods\CW API\CWAPI\obj\Debug\netstandard2.1\CWAPI.csproj.CoreCompileInputs.cache
+C:\Users\K2\Documents\All K2's Stuff\Cursed Words Stuff\Cursed Words Mods\CW API\CWAPI\obj\Debug\netstandard2.1\CWAPI.sourcelink.json

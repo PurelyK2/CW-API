@@ -3,13 +3,22 @@
 using BepInEx;
 using BepInEx.Bootstrap;
 using BepInEx.Logging;
+using CWAPI.Utilities;
 using HarmonyLib;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Text;
+using UnityEngine;
 
 namespace CWAPI;
+
+// Allow For Custom Tile Types (Classes?)
+// Allow For Custom Glyphs
+// Custom Characters
+// Custom Quests
+// Settings Menu Adjustments (For Modded Settings)
+
 
 [BepInPlugin("Purely_K2.CursedAPI", "Cursed Words API", "0.0.1")]
 public class Plugin : BaseUnityPlugin
@@ -33,15 +42,15 @@ public class Plugin : BaseUnityPlugin
             //Assign List Of Plugins
             loadedPlugins = Chainloader.PluginInfos;
 
-            Logger.LogWarning($"Currently Loading {loadedPlugins.Count} Mod{(loadedPlugins.Count == 1 ? "" : "s")}:");
+            Log.LogWarning($"Currently Loading {loadedPlugins.Count} Mod{(loadedPlugins.Count == 1 ? "" : "s")}:");
             foreach (PluginInfo value in loadedPlugins.Values)
             {
-                Logger.LogWarning(value.Metadata.Name);
+                Log.LogWarning(value.Metadata.Name);
             }
         }
         catch (System.Exception e)
         {
-            Logger.LogError(e);
+            Log.LogError(e);
         }
 
         Console.onOrOffMethod = typeof(ConsoleController).GetMethod(
@@ -58,5 +67,16 @@ public class Plugin : BaseUnityPlugin
             "_inputField",
             BindingFlags.Instance | BindingFlags.NonPublic
         );
+
+        Console.Instance = new Console();
+    }
+    void Start()
+    {
+        ItemUtils.PopulateModdedItems();
+        TileUtils.PopulateModdedTileTypes();
+    }
+    void Update()
+    {
+        Console.Instance.UpdateConsole();
     }
 }

@@ -1,4 +1,6 @@
-﻿using HarmonyLib;
+﻿using CWAPI.Items;
+using CWAPI.Tiles;
+using HarmonyLib;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,7 +13,29 @@ namespace CWAPI.Utilities;
 
 public static class ItemUtils
 {
-    public static List<Item> ModdedItems = new List<Item>();
+    public static List<ModdedItem> ModdedItems = new List<ModdedItem>();
+
+    public static void PopulateModdedItems()
+    {
+
+        ModdedItems = new List<ModdedItem>();
+
+        foreach (Assembly pluginAssembly in Plugin.loadedPlugins.Values.Select(info => info.Instance.GetType().Assembly))
+        {
+            List<System.Type> itemTypes = pluginAssembly.GetTypes().Where(t => t.IsSubclassOf(typeof(ModdedItem))).ToList();
+
+            foreach (System.Type itemType in itemTypes)
+            {
+                if (!ModdedItems.Exists(item => item.GetType() == itemType))
+                    ModdedItems.Add((ModdedItem)System.Activator.CreateInstance(itemType));
+            }
+        }
+
+        if (ModdedItems.Count > 0)
+            Log.LogInfo("Modded Tiles Found: " + string.Join("\n", ModdedItems.Select(item => item.Name + item)));
+        else
+            Log.LogWarning("No Modded Items Found");
+    }
 
     /// Adding an item automatically adds it to the collection
     [HarmonyPatch(typeof(CollectionCanvasController), "Start")]
@@ -33,10 +57,18 @@ public static class ItemUtils
     {
         public static void Prefix(ref List<System.Type> itemTypes, ref List<System.Type> ____unlockedItemsTypes, ref List<System.Type> ____lockedItems)
         {
-            PopulateModdedItems();
-
-            foreach (Item item in ModdedItems)
+            foreach (ModdedItem item in ModdedItems)
             {
+                try
+                {
+                    Sprite sprite = item.GetCurrentSprite();
+                }
+                catch (System.Exception e)
+                {
+                    Log.LogError(item.Name + ":");
+                    Log.LogError(e);
+                }
+
                 if (GameStatics.IsUnlockRequired(item.GetType()))
                 {
                     ____lockedItems.Add(item.GetType());
@@ -50,24 +82,6 @@ public static class ItemUtils
             itemTypes.AddRange(ModdedItems.Select(item => item.GetType()));
         }
 
-        public static void PopulateModdedItems()
-        {
-
-            ModdedItems = new List<Item>();
-
-            foreach (Assembly pluginAssembly in Plugin.loadedPlugins.Values.Select(info => info.Instance.GetType().Assembly))
-            {
-                List<System.Type> itemTypes = pluginAssembly.GetTypes().Where(t => t.IsSubclassOf(typeof(Item))).ToList();
-                if (itemTypes.Count == 0)
-                    Log.LogWarning("No Items Found In Assembly: " + Plugin.loadedPlugins.Values.FirstOrDefault(info => info.Instance.GetType().Assembly == pluginAssembly)?.Metadata.Name);
-
-                foreach (System.Type itemType in itemTypes)
-                {
-                    if (!ModdedItems.Exists(item => item.GetType() == itemType))
-                        ModdedItems.Add((Item)System.Activator.CreateInstance(itemType));
-                }
-            }
-        }
     }
 
     /// Adding an item automatically allows it to be gotten by the console "gi" command
@@ -108,4 +122,6 @@ public static class ItemUtils
             }
         }
     }
+
+    //Sprites
 }

@@ -7,3 +7,4 @@ C:\Users\K2\Documents\All K2's Stuff\Cursed Words Stuff\Cursed Words Mods\CW API
 C:\Users\K2\Documents\All K2's Stuff\Cursed Words Stuff\Cursed Words Mods\CW API\CWAPI\bin\Debug\net472\CWAPI.pdb
 C:\Users\K2\Documents\All K2's Stuff\Cursed Words Stuff\Cursed Words Mods\CW API\CWAPI\obj\Debug\net472\CWAPI.dll
 C:\Users\K2\Documents\All K2's Stuff\Cursed Words Stuff\Cursed Words Mods\CW API\CWAPI\obj\Debug\net472\CWAPI.pdb
+C:\Users\K2\Documents\All K2's Stuff\Cursed Words Stuff\Cursed Words Mods\CW API\CWAPI\obj\Debug\net472\CWAPI.sourcelink.json

@@ -7,6 +7,7 @@ using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using TMPro;
+using UnityEngine;
 
 namespace CWAPI;
 
@@ -16,10 +17,10 @@ public class Console
     public static MethodInfo onOrOffMethod;
     public static MethodInfo tryExecuteCommandMethod;
     public static FieldInfo inputFieldField;
-    void UpdateConsole()
-    {
-        Log.LogInfo("Updating Console");
+    public static Console Instance;
 
+    public void UpdateConsole()
+    {
         if (UnityEngine.Input.GetKeyDown(UnityEngine.KeyCode.BackQuote))
         {
             ToggleBuiltInConsole();
