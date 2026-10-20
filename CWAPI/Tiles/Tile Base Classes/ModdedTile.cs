@@ -1,9 +1,12 @@
 ﻿using CWAPI.Items;
 using CWAPI.Utilities;
+using FMOD.Studio;
 using HarmonyLib;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
+using System.Reflection.Emit;
 using TMPro;
 using Unity.VisualScripting;
 using UnityEngine;
@@ -15,31 +18,38 @@ public abstract class ModdedTileType
 {
     public abstract string TileName { get; }
     public TileType tileType = 0;
-    public abstract Color tileColor { get; }
     public abstract Mesh tileMesh { get; }
-    public virtual string tileSelectionClip => "Tiles/Select Colour Tile Red";
+    public virtual string tileSelectionClip => "Tiles/Select Colour Tile Shiny";
     public virtual bool canRandomSpread => false;
     public virtual bool isXenocolor => false;
+    public virtual bool pulses => true;
 
-    public virtual GameObject tileGameObject { get; private set; } = null;
-    public GameObject GetTileObject()
+    public virtual (Color tile, Color word) textColor => (Color.green, Color.green);
+    public virtual GameObject tileGameObject => null;
+
+    //Need To happen after boss effects, glitch tiles, currency tiles, and poker hands, and before items
+    public virtual ScorePacket ModifyTileValue(ScorePacket tileValue) { return tileValue; }
+    public virtual void ApplyTileBonus(ScoreCalcVizInfo step, int index, List<Tile> tiles, List<TileSelection> selections, List<HistoricWord> previousWords, GridData gridData) { }
+    public virtual void ApplyWordBonus(ScoreCalcVizInfo step, int gridNumber, List<Tile> tiles, List<string> words, List<TileSelection> selections, List<HistoricWord> previousWords, GridData gridData) { }
+    // Below Unimplemented
+    public virtual GridData ApplyStartOfGridEffect(GridData gridData, int gridNumber, int numberOfGrids, List<HistoricWord> previousWords, List<BoardGenVizInfo> vizSteps, bool isReroll) { return gridData; }
+
+    // Patch For Base Value
+    [HarmonyPatch(typeof(Tile), "GetValue")]
+    public static class ModifyBaseValuePatch
     {
-        if(tileGameObject == null)
+        public static void Postfix(ref Tile __instance, ref ScorePacket __result)
         {
-            GameObject tileParent = new GameObject("TileNormalParent(Clone)", new System.Type[] { typeof(Transform) });
-            GameObject tileChild = new GameObject("TileNormalB", components: new System.Type[] { typeof(Transform), typeof(MeshRenderer), typeof(OutlineFx.OutlineFx) });
-            MeshFilter filter = tileChild.AddComponent<MeshFilter>();
-            filter.mesh = tileMesh;
+            if (__instance.MyTileType <= TileType.Glitch) return;
 
-            tileChild.transform.SetParent(tileParent.transform);
+            TileType tileType = __instance.MyTileType;
+            ModdedTileType moddedTile = TileUtils.ModdedTileTypes.FirstOrDefault(t => t.tileType == tileType);
 
-            tileGameObject = tileParent;
+            if (moddedTile == null) return;
+
+            __result = moddedTile.ModifyTileValue(__result);
         }
-        return tileGameObject;
     }
-
-    public virtual void ApplyTileBonus(ScoreCalcVizInfo step, int index, List<Tile> tiles, List<TileSelection> selections, List<HistoricWord> previousWords, GridData gridData){}
-    public virtual void ApplyWordBonus(ScoreCalcVizInfo step, int gridNumber, List<Tile> tiles, List<string> words, List<TileSelection> selections, List<HistoricWord> previousWords, GridData gridData){}
 
     // Patch Sound Of Custom Tiles
     [HarmonyPatch(typeof(SoundController), "PlayTileTypeSound", new System.Type[] { typeof(Tile), typeof(float) })]
@@ -73,15 +83,15 @@ public abstract class ModdedTileType
             return true;
         }
         [HarmonyPriority(Priority.First)]
-        public static void Postfix(ref GameObject[] ____tileMeshGOs, ref Renderer ____tileRenderer, ref Renderer[] ____tileRenderers, Tile tile)
+        public static void Postfix(ref TileObject __instance, ref GameObject[] ____tileMeshGOs, ref TextMeshPro ____letterTMP, ref TextMeshPro ____scoreTMP, ref Color ____textColor, ref Color ____scoreColor, Tile tile)
         {
             if (tile == null) return;
 
             tile.MyTileType = cachedTileType;
 
-            //if (tile.MyTileType <= TileType.Glitch) return;
+            tile.MyTileType = (TileType)12; //TESTING!!!
 
-            tile.MyTileType = (TileType)12; //TESTING
+            if (tile.MyTileType <= TileType.Glitch) return;
 
             Log.LogInfo("Getting Modded Tile Type" + (int)tile.GetTileType());
             GameObject thisTile = null;
@@ -102,9 +112,8 @@ public abstract class ModdedTileType
                     Log.LogError("Failed To Get Tile Object");
                     return;
                 }
-                thisTile.name = "ModdedTile";
 
-                Log.LogInfo(string.Join("\n", ____tileMeshGOs.ToArray<object>()));
+                thisTile.name = "ModdedTile";
 
                 try
                 {
@@ -120,9 +129,21 @@ public abstract class ModdedTileType
                 ____tileMeshGOs = new GameObject[tileMeshGOList.Count];
                 ____tileMeshGOs = tileMeshGOList.ToArray();
             }
-        TILECONT:
+            TILECONT:
 
             if (thisTile == null) return;
+
+            ModdedTileType tileType = TileUtils.ModdedTileTypes.FirstOrDefault(t => t.tileType == tile.MyTileType);
+
+            if(tileType != null)
+            {
+                ____letterTMP.color = tileType.textColor.tile;
+                ____scoreTMP.color = tileType.textColor.tile;
+                ____scoreTMP.SetText(__instance.MyTile.GetValueForDisplay());
+
+                ____textColor = tileType.textColor.tile;
+                ____scoreColor = tileType.textColor.tile;
+            }
 
             foreach(GameObject tileMeshGO in ____tileMeshGOs)
             {
@@ -146,7 +167,7 @@ public abstract class ModdedTileType
 
             if (!____tileColorGOs.Any(GO => GO.name == "ModdedTile"))
             {
-                GameObject moddedTileColorGO = GameObject.Instantiate(____tileColorGOs[10], ____tileColorGOs[10].transform.parent, false);
+                GameObject moddedTileColorGO = GameObject.Instantiate(____tileColorGOs[2], ____tileColorGOs[0].transform.parent, false);
 
                 moddedTileColorGO.name = "ModdedTile";
 
@@ -160,7 +181,70 @@ public abstract class ModdedTileType
 
             __result = ____tileColorGOs.FirstOrDefault(GO => GO.name == "ModdedTile");
 
+            ModdedTileType mTileType = TileUtils.ModdedTileTypes.FirstOrDefault(t => t.tileType == tileType);
+
+            if (mTileType != null)
+            {
+                __result.GetComponentInChildren<TextMeshProUGUI>().color = mTileType.textColor.word;
+            }
+
             return false;
+        }
+    }
+
+    //===============================SCARY IL ZONE========================
+    [HarmonyPatch(typeof(ScoreCalculation), "CalculateOverallScore", new Type[] {typeof(List<TileSelection>), typeof(List<string>), typeof(List<Item>), typeof(List<HistoricWord>), typeof(List<BossModifier>), typeof(GridData), typeof(int)})]
+    public static class ApplyModdedTileBonuses
+    {
+        [HarmonyTranspiler]
+        public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
+        {
+            ConstructorInfo listConstructor = AccessTools.Constructor(typeof(List<Item>), new Type[] { typeof(List<Item>) });
+
+            MethodInfo hookMethod = AccessTools.Method(typeof(ApplyModdedTileBonuses), nameof(ApplyModdedTileBonuses.PatchAllTiles));
+
+            var matcher = new CodeMatcher(instructions);
+
+            matcher.MatchStartForward(new CodeMatch(OpCodes.Newobj, listConstructor));
+
+            if(matcher.IsValid)
+            {
+                matcher.Insert(
+                    new CodeInstruction(OpCodes.Dup),
+                    new CodeInstruction(OpCodes.Ldarg_0),
+                    new CodeInstruction(OpCodes.Ldarg_1),
+                    new CodeInstruction(OpCodes.Ldloc_0),
+                    new CodeInstruction(OpCodes.Ldarg_S, 3),
+                    new CodeInstruction(OpCodes.Ldarg_S, 5),
+                    new CodeInstruction(OpCodes.Ldarg_S, 6),
+                    new CodeInstruction(OpCodes.Call, hookMethod)
+                );
+            }
+            else
+            {
+                Log.LogInfo("Couldn't Find Patch Spot For Tile Apply Score Stuff");
+            }
+
+            return matcher.InstructionEnumeration();
+        }
+
+        static void PatchAllTiles(List<Item> newList, List<TileSelection> selectedTiles, List<string> words, List<ScoreCalcVizInfo> vizInfo, List<HistoricWord> historicWords, GridData gridData, int gridNumber)
+        {
+            Log.LogInfo("Patching In Tile Scoring");
+
+            foreach(TileSelection selectedTile in selectedTiles.Where(selTile => selTile.SelectedTile.GetTileType() > TileType.Glitch))
+            {
+                ScoreCalcVizInfo nextStep = ScoreCalculation.GetNextStep(vizInfo);
+
+                ModdedTileType moddedTile = TileUtils.ModdedTileTypes.FirstOrDefault(t => t.tileType == selectedTile.SelectedTile.MyTileType);
+                if (moddedTile != null && moddedTile.pulses)
+                    nextStep.LettersOnGridToPulse.Add(selectedTile.SelectedTile);
+
+                moddedTile.ApplyTileBonus(nextStep, selectedTiles.IndexOf(selectedTile), selectedTiles.Select(selTile => selTile.SelectedTile).ToList(), selectedTiles, historicWords, gridData);
+                moddedTile.ApplyWordBonus(nextStep, gridNumber, selectedTiles.Select(selTile => selTile.SelectedTile).ToList(), words, selectedTiles, historicWords, gridData);
+
+                vizInfo.Add(nextStep);
+            }
         }
     }
 }
