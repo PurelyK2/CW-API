@@ -43,4 +43,9 @@ public static class TileUtils
         else
             Log.LogWarning("No Modded Items Found");
     }
+    
+    public static TileType GetTileType<T>() where T : ModdedTileType
+    {
+        return ModdedTileTypes.FirstOrDefault(t => t.GetType() == typeof(T))?.tileType ?? TileType.Normal;
+    }
 }

@@ -22,9 +22,6 @@ using OpCodes = System.Reflection.Emit.OpCodes;
 
 namespace CWAPI.Tiles;
 
-// Let Items Spawn Tiles
-// Get Meshes To Swap Out Right
-
 public abstract class ModdedTileType
 {
     private GameObject privateTileMesh;
@@ -37,6 +34,7 @@ public abstract class ModdedTileType
     public virtual bool pulses => true;
 
     public virtual (Color tile, Color word) textColor => (Color.green, Color.green);
+    public virtual Color tileColor => Color.clear;
 
     //Need To happen after boss effects, glitch tiles, currency tiles, and poker hands, and before items
     public virtual ScorePacket ModifyTileValue(ScorePacket tileValue) { return tileValue; }
@@ -198,6 +196,11 @@ public abstract class ModdedTileType
 
                 ____tileMeshGOs[11] = GameObject.Instantiate(tileType.tileMesh, ____tileMeshGOs[11].transform.parent, false);
                 ____tileMeshGOs[11].name = "Modded Tile";
+
+                if(tileType.tileColor != Color.clear)
+                {
+                    ____tileMeshGOs[11].GetComponentInChildren<MeshRenderer>().material.color = tileType.tileColor;
+                }
             }
             ____tileMeshGOs[11].SetActive(true);
 
@@ -206,6 +209,7 @@ public abstract class ModdedTileType
             ____scoreTMP.color = tileType.textColor.tile;
 
             ____letterTMP?.color = tileType.textColor.tile;
+            __instance.Outline.Color = tileType.textColor.tile;
         }
     }
 

@@ -1,10 +1,10 @@
+C:\Users\K2\Documents\All K2's Stuff\Cursed Words Stuff\Cursed Words Mods\CW API\CWAPI\bin\Debug\net472\CWAPI.dll
+C:\Users\K2\Documents\All K2's Stuff\Cursed Words Stuff\Cursed Words Mods\CW API\CWAPI\bin\Debug\net472\CWAPI.pdb
 C:\Users\K2\Documents\All K2's Stuff\Cursed Words Stuff\Cursed Words Mods\CW API\CWAPI\obj\Debug\net472\CWAPI.csproj.AssemblyReference.cache
 C:\Users\K2\Documents\All K2's Stuff\Cursed Words Stuff\Cursed Words Mods\CW API\CWAPI\obj\Debug\net472\CWAPI.GeneratedMSBuildEditorConfig.editorconfig
 C:\Users\K2\Documents\All K2's Stuff\Cursed Words Stuff\Cursed Words Mods\CW API\CWAPI\obj\Debug\net472\CWAPI.AssemblyInfoInputs.cache
 C:\Users\K2\Documents\All K2's Stuff\Cursed Words Stuff\Cursed Words Mods\CW API\CWAPI\obj\Debug\net472\CWAPI.AssemblyInfo.cs
 C:\Users\K2\Documents\All K2's Stuff\Cursed Words Stuff\Cursed Words Mods\CW API\CWAPI\obj\Debug\net472\CWAPI.csproj.CoreCompileInputs.cache
-C:\Users\K2\Documents\All K2's Stuff\Cursed Words Stuff\Cursed Words Mods\CW API\CWAPI\bin\Debug\net472\CWAPI.dll
-C:\Users\K2\Documents\All K2's Stuff\Cursed Words Stuff\Cursed Words Mods\CW API\CWAPI\bin\Debug\net472\CWAPI.pdb
+C:\Users\K2\Documents\All K2's Stuff\Cursed Words Stuff\Cursed Words Mods\CW API\CWAPI\obj\Debug\net472\CWAPI.sourcelink.json
 C:\Users\K2\Documents\All K2's Stuff\Cursed Words Stuff\Cursed Words Mods\CW API\CWAPI\obj\Debug\net472\CWAPI.dll
 C:\Users\K2\Documents\All K2's Stuff\Cursed Words Stuff\Cursed Words Mods\CW API\CWAPI\obj\Debug\net472\CWAPI.pdb
-C:\Users\K2\Documents\All K2's Stuff\Cursed Words Stuff\Cursed Words Mods\CW API\CWAPI\obj\Debug\net472\CWAPI.sourcelink.json

@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("CWAPI")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+48616f635e5c5ba89b9a4a7b868161d8f34a2127")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+7f78260e0e38e00b120af19546841a707263aadb")]
 [assembly: System.Reflection.AssemblyProductAttribute("CWAPI")]
 [assembly: System.Reflection.AssemblyTitleAttribute("CWAPI")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

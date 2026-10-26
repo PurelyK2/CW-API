@@ -25,7 +25,7 @@ public abstract class ModdedItem : Item
     public ModdedItem()
     {
         //Sprite Init
-        ItemSprite = LoadSprite(SpritePath);
+        ItemSprite = LoadSprite();
         ItemSprite.name = "ModdedItem";
 
         //SDF Init
@@ -45,17 +45,17 @@ public abstract class ModdedItem : Item
     {
         return ItemSprite;
     }
-    Sprite LoadSprite(string path, float pixelsPerUnit = 200)
+    Sprite LoadSprite(float pixelsPerUnit = 200)
     {
         if (SpritePath == "") return Sprite.Create(new Texture2D(1,1), new Rect(), Vector2.zero);
 
-        Assembly assembly = typeof(Plugin).Assembly;
+        Assembly assembly = this.GetType().Assembly;
 
-        using (Stream stream = assembly.GetManifestResourceStream(path))
+        using (Stream stream = assembly.GetManifestResourceStream(SpritePath))
         {
             if (stream == null)
             {
-                Debug.LogError($"[CWAPI] Failed to find embedded resource: {path}");
+                Debug.LogError($"[CWAPI] Failed to find embedded resource: {SpritePath}");
                 return null;
             }
 
