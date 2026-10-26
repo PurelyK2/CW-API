@@ -19,8 +19,8 @@ public abstract class ModdedCharacter : Character
 {
     public virtual Sprite CharacterSprite => null;
     public virtual RuntimeAnimatorController CharacterAnimator => null;
-    public virtual bool StartUnlocked => true;
-    public ModdedCharacter(string name, string steamAchievementName, string description, Item characterItem, string artFileName, Color uiColorA, Color uiColorB, Vector3 endScreenVictoryOffset, Vector3 endScreenDefeatOffset, List<Type> goodIntroItemTypes, Emotions myEmotion) : base(name, steamAchievementName, description, characterItem, artFileName, uiColorA, uiColorB, endScreenVictoryOffset, endScreenDefeatOffset, goodIntroItemTypes, myEmotion)
+    public virtual bool IsUnlocked => true;
+    public ModdedCharacter(string name, string steamAchievementName, string description, Item characterItem, string artFileName, Color uiColorA, Color uiColorB, Vector3 endScreenVictoryOffset, Vector3 endScreenDefeatOffset, List<Type> goodIntroItemTypes, Emotions myEmotion, bool isSecret = false, string secretUnlockCondition = "") : base(name, steamAchievementName, description, characterItem, artFileName, uiColorA, uiColorB, endScreenVictoryOffset, endScreenDefeatOffset, goodIntroItemTypes, myEmotion, isSecret, secretUnlockCondition)
     {
     }
 
@@ -101,9 +101,10 @@ public abstract class ModdedCharacter : Character
             foreach(ModdedCharacter character in CharacterUtils.ModdedCharacters)
             {
                 ____characters.Add(character.GetType(), SaveManager.GetUnlockedCharacters().Contains(character.GetType()));
+
                 if (__instance.IsInChallenge())
                 {
-                    if ((character as Character).IsSecret())
+                    if (character.IsSecret())
                     {
                         ____characters.Remove(character.GetType());
                     }
@@ -120,7 +121,7 @@ public abstract class ModdedCharacter : Character
         {
             foreach (ModdedCharacter character in CharacterUtils.ModdedCharacters)
             {
-                if (character.StartUnlocked) __result.Add(character.GetType());
+                if (character.IsUnlocked) __result.Add(character.GetType());
             }
         }
     }
@@ -136,7 +137,7 @@ public abstract class ModdedCharacter : Character
             {
                 if (moddedCharacter.GetType() == character.GetType())
                 {
-                    __result = SaveManager.GetUnlockedCharacters().Contains(character.GetType());
+                    __result = moddedCharacter.IsUnlocked;
                     return;
                 }
             }
@@ -155,7 +156,8 @@ public abstract class ModdedCharacter : Character
             {
                 if (____saveFile.CharacterHighestCompletedAscensions.ContainsKey(character.GetType())) continue;
 
-                ____saveFile.CharacterHighestCompletedAscensions.Add(character.GetType(), -1);
+                if(character.IsUnlocked)
+                    ____saveFile.CharacterHighestCompletedAscensions.Add(character.GetType(), -1);
             }
         }
     }
