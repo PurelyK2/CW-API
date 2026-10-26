@@ -14,11 +14,9 @@ using UnityEngine;
 
 namespace CWAPI;
 
-// Fix custom tile types to spawn right and have onspawn abilities
 // Settings Menu Adjustments (For Modded Settings)
 
-
-[BepInPlugin("Purely_K2.CursedAPI", "Cursed Words API", "0.0.1")]
+[BepInPlugin("Purely_K2.CursedAPI", "Cursed Words API", "0.1.0")]
 public class Plugin : BaseUnityPlugin
 {
     public static Plugin Instance;

@@ -43,9 +43,9 @@ public abstract class ModdedTileType
     public virtual void ApplyTileBonus(ScoreCalcVizInfo step, int index, List<Tile> tiles, List<TileSelection> selections, List<HistoricWord> previousWords, GridData gridData) { }
     public virtual void ApplyWordBonus(ScoreCalcVizInfo step, int gridNumber, List<Tile> tiles, List<string> words, List<TileSelection> selections, List<HistoricWord> previousWords, GridData gridData) { }
     public virtual void ApplyTileSpawnEffect(Tile tile, GridData gridData, int gridNumber, int numberOfGrids, List<HistoricWord> previousWords, List<BoardGenVizInfo> vizSteps, bool isReroll) { }
+    public virtual GridData ApplyStartOfGridEffect(GridData gridData, int gridNumber, int numberOfGrids, List<HistoricWord> previousWords, List<BoardGenVizInfo> vizSteps, bool isReroll) { return gridData; }
 
-    // Patch For Start Of Grid Stuff
-    static List<Tile> moddedTiles = new List<Tile>();
+    // Patches For Start Of Grid Stuff
     [HarmonyPatch(typeof(GridUtilitySingleton), "GenerateGrid", new System.Type[] {
         typeof(int), // width
         typeof(int), // height
@@ -69,10 +69,6 @@ public abstract class ModdedTileType
     })]
     public static class OrganizeAndDoTileStuff
     {
-        public static void Prefix()
-        {
-            moddedTiles = new List<Tile>();
-        }
         public static void Postfix(ref GridData __result, int gridNumber, int numberOfGrids, List<HistoricWord> previousWords, List<BoardGenVizInfo> vizSteps, bool isReroll)
         {
             foreach(Tile tile in vizSteps[vizSteps.Count - 1].Grid.GridTiles)
@@ -82,6 +78,28 @@ public abstract class ModdedTileType
                 ModdedTileType moddedTile = TileUtils.ModdedTileTypes.FirstOrDefault(t => t.tileType == tile.MyTileType);
 
                 moddedTile.ApplyTileSpawnEffect(tile, vizSteps[vizSteps.Count - 1].Grid, gridNumber, numberOfGrids, previousWords, vizSteps, isReroll);
+            }
+        }
+    }
+    [HarmonyPatch(typeof(GridUtilitySingleton), "MakeStartOfGridItemAdjustments")]
+    public static class MakeStartOfGridTileAdjustments
+    {
+        public static void Prefix(ref GridData __result, int gridNumber, int numberOfGrids, List<HistoricWord> previousWords, List<BoardGenVizInfo> vizSteps, bool isReroll)
+        {
+            if (GameStatics.GetPlayer().GetUnpackedItemsOfType(typeof(Hourglass), false).Count % 2 == 0) return;
+
+            foreach (ModdedTileType tileType in TileUtils.ModdedTileTypes)
+            {
+                __result = tileType.ApplyStartOfGridEffect(__result, gridNumber, numberOfGrids, previousWords, vizSteps, isReroll);
+            }
+        }
+        public static void Postfix(ref GridData __result, int gridNumber, int numberOfGrids, List<HistoricWord> previousWords, List<BoardGenVizInfo> vizSteps, bool isReroll)
+        {
+            if (GameStatics.GetPlayer().GetUnpackedItemsOfType(typeof(Hourglass), false).Count % 2 == 1) return;
+
+            foreach (ModdedTileType tileType in TileUtils.ModdedTileTypes)
+            {
+                __result = tileType.ApplyStartOfGridEffect(__result, gridNumber, numberOfGrids, previousWords, vizSteps, isReroll);
             }
         }
     }
@@ -155,6 +173,7 @@ public abstract class ModdedTileType
 
             return false;
         }
+        [HarmonyPriority(Priority.First)]
         public static void Postfix(ref TileObject __instance, ref Renderer ____tileRenderer, ref string ____displayedTileValue, ref Color ____textColor, ref Color ____scoreColor, ref GameObject[] ____tileMeshGOs, ref Renderer[] ____tileRenderers, ref OutlineFx.OutlineFx[] ____outlines, ref GameObject[] ____textParentGOs, ref GameObject ____crossOutGO, ref GameObject ____scatteredItemParentGO, ref ItemObject ____scatteredItemObject, ref TextMeshPro ____letterTMP, ref TextMeshPro[] ____letterTMPs, ref TextMeshPro[] ____scoreTMPs, ref TextMeshPro ____scoreTMP, ref CharacterWobble ____characterWobble, ref TextMeshPro ____suitTMP, ref int ____currentLightLayer, ref Color[] ____suitColors)
         {
             __instance?.MyTile?.MyTileType = currentTileType;
@@ -166,7 +185,7 @@ public abstract class ModdedTileType
 
             if (tileType.tileMesh == null)
             {
-                tileType.tileMesh = GameObject.Instantiate(____tileMeshGOs[10], ____tileMeshGOs[11].transform.parent, false);
+                tileType.tileMesh = GameObject.Instantiate(____tileMeshGOs[15], ____tileMeshGOs[11].transform.parent, false);
                 tileType.tileMesh.SetActive(false);
             }
 
