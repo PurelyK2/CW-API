@@ -1,4 +1,5 @@
 ﻿global using static CWAPI.Plugin;
+global using Random = UnityEngine.Random;
 
 using BepInEx;
 using BepInEx.Bootstrap;
@@ -13,10 +14,7 @@ using UnityEngine;
 
 namespace CWAPI;
 
-// Allow For Custom Tile Types (Classes?)
-// Allow For Custom Glyphs
-// Custom Characters
-// Custom Quests
+// Fix custom tile types to spawn right and have onspawn abilities
 // Settings Menu Adjustments (For Modded Settings)
 
 
@@ -74,6 +72,8 @@ public class Plugin : BaseUnityPlugin
     {
         ItemUtils.PopulateModdedItems();
         TileUtils.PopulateModdedTileTypes();
+        CharacterUtils.PopulateModdedCharacters();
+        ChallengeUtils.PopulateModdedChallenges();
     }
     void Update()
     {

@@ -1,5 +1,4 @@
 ﻿using CWAPI.Items;
-using CWAPI.Tiles;
 using HarmonyLib;
 using System;
 using System.Collections.Generic;
@@ -13,6 +12,7 @@ namespace CWAPI.Utilities;
 
 public static class ItemUtils
 {
+    public static List<Item> FullItemsList = new List<Item>();
     public static List<ModdedItem> ModdedItems = new List<ModdedItem>();
 
     public static void PopulateModdedItems()
@@ -32,9 +32,12 @@ public static class ItemUtils
         }
 
         if (ModdedItems.Count > 0)
-            Log.LogInfo("Modded Tiles Found: " + string.Join("\n", ModdedItems.Select(item => item.Name + item)));
+            Log.LogInfo("Modded Items Found: " + string.Join("\n", ModdedItems.Select(item => item.Name + item)));
         else
             Log.LogWarning("No Modded Items Found");
+
+        FullItemsList = new List<Item>(ModdedItems);
+        FullItemsList.AddRange(Assembly.GetAssembly(typeof(Item)).GetTypes().Where(t => t.IsClass && t.IsSubclassOf(typeof(Item))).Select(item => (Item)System.Activator.CreateInstance(item)));
     }
 
     /// Adding an item automatically adds it to the collection
@@ -98,9 +101,9 @@ public static class ItemUtils
                     Log.LogDebug("Console Error: Type Is Null. Testing With Extension:");
 
                     string argument = args[1];
-                    if (ModdedItems.Exists(item => item.GetType().ToString().Substring(item.GetType().ToString().ToList().IndexOf('.') + 1) == argument))
+                    if (ModdedItems.Any(item => item.Name.Replace(" ", "-") == argument))
                     {
-                        type = ModdedItems.FirstOrDefault(item => item.GetType().ToString().Substring(item.GetType().ToString().ToList().IndexOf('.') + 1) == argument).GetType();
+                        type = ModdedItems.FirstOrDefault(item => item.Name.Replace(" ", "-") == argument).GetType();
 
                         if (type != null && type.IsSubclassOf(typeof(Item)))
                         {

@@ -47,6 +47,8 @@ public abstract class ModdedItem : Item
     }
     Sprite LoadSprite(string path, float pixelsPerUnit = 200)
     {
+        if (SpritePath == "") return Sprite.Create(new Texture2D(1,1), new Rect(), Vector2.zero);
+
         Assembly assembly = typeof(Plugin).Assembly;
 
         using (Stream stream = assembly.GetManifestResourceStream(path))

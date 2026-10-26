@@ -2,7 +2,11 @@
 using CWAPI.Utilities;
 using FMOD.Studio;
 using HarmonyLib;
+using Mono.Cecil.Cil;
+using MonoMod.Cil;
+using OutlineFx;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -10,29 +14,77 @@ using System.Reflection.Emit;
 using TMPro;
 using Unity.VisualScripting;
 using UnityEngine;
+using UnityEngine.Rendering;
+using UnityEngine.Tilemaps;
+using UnityEngine.UIElements;
 using Color = UnityEngine.Color;
+using OpCodes = System.Reflection.Emit.OpCodes;
 
 namespace CWAPI.Tiles;
 
+// Let Items Spawn Tiles
+// Get Meshes To Swap Out Right
+
 public abstract class ModdedTileType
 {
+    private GameObject privateTileMesh;
+    public virtual GameObject tileMesh { get => privateTileMesh; set => privateTileMesh = value; }
     public abstract string TileName { get; }
     public TileType tileType = 0;
-    public abstract Mesh tileMesh { get; }
     public virtual string tileSelectionClip => "Tiles/Select Colour Tile Shiny";
     public virtual bool canRandomSpread => false;
     public virtual bool isXenocolor => false;
     public virtual bool pulses => true;
 
     public virtual (Color tile, Color word) textColor => (Color.green, Color.green);
-    public virtual GameObject tileGameObject => null;
 
     //Need To happen after boss effects, glitch tiles, currency tiles, and poker hands, and before items
     public virtual ScorePacket ModifyTileValue(ScorePacket tileValue) { return tileValue; }
     public virtual void ApplyTileBonus(ScoreCalcVizInfo step, int index, List<Tile> tiles, List<TileSelection> selections, List<HistoricWord> previousWords, GridData gridData) { }
     public virtual void ApplyWordBonus(ScoreCalcVizInfo step, int gridNumber, List<Tile> tiles, List<string> words, List<TileSelection> selections, List<HistoricWord> previousWords, GridData gridData) { }
-    // Below Unimplemented
-    public virtual GridData ApplyStartOfGridEffect(GridData gridData, int gridNumber, int numberOfGrids, List<HistoricWord> previousWords, List<BoardGenVizInfo> vizSteps, bool isReroll) { return gridData; }
+    public virtual void ApplyTileSpawnEffect(Tile tile, GridData gridData, int gridNumber, int numberOfGrids, List<HistoricWord> previousWords, List<BoardGenVizInfo> vizSteps, bool isReroll) { }
+
+    // Patch For Start Of Grid Stuff
+    static List<Tile> moddedTiles = new List<Tile>();
+    [HarmonyPatch(typeof(GridUtilitySingleton), "GenerateGrid", new System.Type[] {
+        typeof(int), // width
+        typeof(int), // height
+        typeof(int), // gridNumber
+        typeof(int), // numberOfGrids
+        typeof(List<HistoricWord>), // previousWords
+        typeof(List<BossModifier>), // bossModifiers
+        typeof(List<BoardGenVizInfo>), // out vizSteps (Note the MakeByRefType)
+        typeof(bool), // isReroll
+        typeof(List<Tile>) // staticTiles
+    }, new ArgumentType[] {
+            ArgumentType.Normal, // width
+            ArgumentType.Normal, // height
+            ArgumentType.Normal, // gridNumber
+            ArgumentType.Normal, // numberOfGrids
+            ArgumentType.Normal, // previousWords
+            ArgumentType.Normal, // bossModifiers
+            ArgumentType.Out,    // vizSteps (Tells Harmony this one is an 'out' param)
+            ArgumentType.Normal, // isReroll
+            ArgumentType.Normal  // staticTiles
+    })]
+    public static class OrganizeAndDoTileStuff
+    {
+        public static void Prefix()
+        {
+            moddedTiles = new List<Tile>();
+        }
+        public static void Postfix(ref GridData __result, int gridNumber, int numberOfGrids, List<HistoricWord> previousWords, List<BoardGenVizInfo> vizSteps, bool isReroll)
+        {
+            foreach(Tile tile in vizSteps[vizSteps.Count - 1].Grid.GridTiles)
+            {
+                if (tile.MyTileType <= TileType.Glitch) continue;
+
+                ModdedTileType moddedTile = TileUtils.ModdedTileTypes.FirstOrDefault(t => t.tileType == tile.MyTileType);
+
+                moddedTile.ApplyTileSpawnEffect(tile, vizSteps[vizSteps.Count - 1].Grid, gridNumber, numberOfGrids, previousWords, vizSteps, isReroll);
+            }
+        }
+    }
 
     // Patch For Base Value
     [HarmonyPatch(typeof(Tile), "GetValue")]
@@ -70,92 +122,74 @@ public abstract class ModdedTileType
     [HarmonyPatch(typeof(TileObject), "Populate", new Type[] { typeof(Tile), typeof(bool) })]
     public static class CorrectlyPopulateModdedTile
     {
-        static TileType cachedTileType = TileType.Normal;
-        public static bool Prefix(ref TileObject __instance, ref Tile tile)
+        static Dictionary<TileObject, GameObject> normalGlitchMeshes = new Dictionary<TileObject, GameObject>();
+        static TileType currentTileType;
+        public static bool Prefix(Tile tile, ref TileObject __instance, ref GameObject[] ____textParentGOs, ref GameObject[] ____tileMeshGOs)
         {
-            if (tile == null && __instance != null && __instance.MyTile != null && __instance.MyTile.MyTileType > TileType.Glitch) return false;
-            if (tile == null) return true;
+            if (!normalGlitchMeshes.ContainsKey(__instance))
+            {
+                normalGlitchMeshes[__instance] = GameObject.Instantiate(____tileMeshGOs[11], ____tileMeshGOs[11].transform.parent, false);
+                normalGlitchMeshes[__instance].SetActive(false);
+            }
 
-            cachedTileType = tile.MyTileType;
+            ____tileMeshGOs[11].SetActive(false);
+            ____tileMeshGOs[11] = GameObject.Instantiate(normalGlitchMeshes[__instance], normalGlitchMeshes[__instance].transform.parent, false);
+            ____tileMeshGOs[11].SetActive(false);
 
-            if (cachedTileType > TileType.Glitch)
-                tile.MyTileType = TileType.Normal;
-            return true;
+            if (tile != null)
+            {
+                currentTileType = tile.MyTileType;
+                if (tile.MyTileType > TileType.Glitch)
+                    tile.MyTileType = TileType.Glitch;
+            }
+            else 
+            {
+                currentTileType = __instance.MyTile.MyTileType;
+                if (__instance.MyTile?.MyTileType > TileType.Glitch)
+                    __instance.MyTile.MyTileType = TileType.Glitch;
+            }
+
+            if (tile != null) __instance.MyTile = tile;
+
+            if (__instance?.MyTile == null || __instance?.MyTile?.MyTileType <= TileType.Glitch || __instance.MyTile.HasBeenDestroyed || __instance.MyTile.IsInTheVoid) return true;
+
+            return false;
         }
-        [HarmonyPriority(Priority.First)]
-        public static void Postfix(ref TileObject __instance, ref GameObject[] ____tileMeshGOs, ref TextMeshPro ____letterTMP, ref TextMeshPro ____scoreTMP, ref Color ____textColor, ref Color ____scoreColor, Tile tile)
+        public static void Postfix(ref TileObject __instance, ref Renderer ____tileRenderer, ref string ____displayedTileValue, ref Color ____textColor, ref Color ____scoreColor, ref GameObject[] ____tileMeshGOs, ref Renderer[] ____tileRenderers, ref OutlineFx.OutlineFx[] ____outlines, ref GameObject[] ____textParentGOs, ref GameObject ____crossOutGO, ref GameObject ____scatteredItemParentGO, ref ItemObject ____scatteredItemObject, ref TextMeshPro ____letterTMP, ref TextMeshPro[] ____letterTMPs, ref TextMeshPro[] ____scoreTMPs, ref TextMeshPro ____scoreTMP, ref CharacterWobble ____characterWobble, ref TextMeshPro ____suitTMP, ref int ____currentLightLayer, ref Color[] ____suitColors)
         {
-            if (tile == null) return;
+            __instance?.MyTile?.MyTileType = currentTileType;
 
-            tile.MyTileType = cachedTileType;
+            ModdedTileType tileType = TileUtils.ModdedTileTypes.FirstOrDefault(t => t.tileType == currentTileType);
+            ____scoreTMP.SetText(__instance.MyTile.GetValue().ToString());
 
-            tile.MyTileType = (TileType)12; //TESTING!!!
+            if (tileType == null) return;
 
-            if (tile.MyTileType <= TileType.Glitch) return;
-
-            Log.LogInfo("Getting Modded Tile Type" + (int)tile.GetTileType());
-            GameObject thisTile = null;
-            if (TileUtils.ModdedTileTypes.Any(t => t.tileType == tile.GetTileType()))
+            if (tileType.tileMesh == null)
             {
-                if(____tileMeshGOs.Any(GO => GO.name == "ModdedTile"))
-                {
-                    thisTile = ____tileMeshGOs.FirstOrDefault(GO => GO.name == "ModdedTile");
-                    Log.LogInfo("ModdedTile Already Exists Here");
-                    goto TILECONT;
-                }
-
-                Log.LogInfo("Found Proper Tile Type");
-                ModdedTileType thisTileType = TileUtils.ModdedTileTypes.FirstOrDefault(t => t.tileType == tile.MyTileType);
-
-                if ((thisTile = thisTileType.tileGameObject) == null && (thisTile = GameObject.Instantiate(____tileMeshGOs[11], ____tileMeshGOs[11].transform.parent, false)) == null)
-                {
-                    Log.LogError("Failed To Get Tile Object");
-                    return;
-                }
-
-                thisTile.name = "ModdedTile";
-
-                try
-                {
-                    if (thisTileType != null && thisTileType.tileMesh != null)
-                        thisTile.GetComponent<MeshFilter>().mesh = thisTileType.tileMesh;
-                }
-                catch (Exception e)
-                {
-                    Log.LogFatal(e);
-                }
-                List<GameObject> tileMeshGOList = ____tileMeshGOs.ToList();
-                tileMeshGOList.Add(thisTile);
-                ____tileMeshGOs = new GameObject[tileMeshGOList.Count];
-                ____tileMeshGOs = tileMeshGOList.ToArray();
-            }
-            TILECONT:
-
-            if (thisTile == null) return;
-
-            ModdedTileType tileType = TileUtils.ModdedTileTypes.FirstOrDefault(t => t.tileType == tile.MyTileType);
-
-            if(tileType != null)
-            {
-                ____letterTMP.color = tileType.textColor.tile;
-                ____scoreTMP.color = tileType.textColor.tile;
-                ____scoreTMP.SetText(__instance.MyTile.GetValueForDisplay());
-
-                ____textColor = tileType.textColor.tile;
-                ____scoreColor = tileType.textColor.tile;
+                tileType.tileMesh = GameObject.Instantiate(____tileMeshGOs[10], ____tileMeshGOs[11].transform.parent, false);
+                tileType.tileMesh.SetActive(false);
             }
 
-            foreach(GameObject tileMeshGO in ____tileMeshGOs)
+            if (____tileMeshGOs[11].name != "Modded Tile")
             {
-                tileMeshGO.SetActive(false);
-            }
+                if (____tileMeshGOs[11] != null)
+                {
+                    GameObject.Destroy(____tileMeshGOs[11]);
+                }
 
-            if(____tileMeshGOs.Any(GO => GO.name == "ModdedTile"))
-            {
-                ____tileMeshGOs.FirstOrDefault(GO => GO.name == "ModdedTile").SetActive(true);
+                ____tileMeshGOs[11] = GameObject.Instantiate(tileType.tileMesh, ____tileMeshGOs[11].transform.parent, false);
+                ____tileMeshGOs[11].name = "Modded Tile";
             }
+            ____tileMeshGOs[11].SetActive(true);
+
+            ____tileRenderer = ____tileRenderers[11];
+
+            ____scoreTMP.color = tileType.textColor.tile;
+
+            ____letterTMP?.color = tileType.textColor.tile;
         }
     }
+
 
     // Allow Correctly Finding Tile Type Game Object
     [HarmonyPatch(typeof(WordLetterController), "GetGOFromTileType", new Type[] { typeof(TileType) })]
@@ -189,6 +223,42 @@ public abstract class ModdedTileType
             }
 
             return false;
+        }
+    }
+
+    [HarmonyPatch(typeof(FullSerializer.Internal.fsDictionaryConverter), "AddItemToDictionary")] //IDEK why this is needed! :sob:
+    public static class FixDuplicateKeyPatch
+    {
+        [HarmonyPrefix]
+        public static bool Prefix(IDictionary dictionary, object key, object value)
+        {
+            if (key == null) return false;
+
+            if (dictionary.Contains(key))
+            {
+                dictionary[key] = value;
+
+                return false;
+            }
+            return true;
+        }
+    }
+
+    [HarmonyPatch(typeof(BoardGenVizInfo), MethodType.Constructor, new System.Type[] { typeof(GridData), typeof(Item), typeof(List<Tile>), typeof(bool), typeof(Type), typeof(bool), typeof(bool), typeof(bool), typeof(Tile[]) })]
+    public static class UnserializeGridData
+    {
+        public static void Postfix(GridData grid, ref BoardGenVizInfo __instance)
+        {
+            // change to foreach for tile types instead of 
+            if (grid != null && __instance?.Grid != null)
+            {
+                int i = 0;
+                foreach (Tile tile in __instance.Grid.GridTiles)
+                {
+                    tile.MyTileType = grid.GridTiles[i].MyTileType;
+                    i++;
+                }
+            }
         }
     }
 
