@@ -7,8 +7,11 @@ using System.Reflection;
 using System.Text;
 using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace CWAPI.Utilities;
+
+// Make Modded Save Data
 
 public static class ItemUtils
 {
@@ -51,6 +54,40 @@ public static class ItemUtils
 
             ___AlphabeticalItems.AddRange(ModdedItems);
             ___AlphabeticalItems = ___AlphabeticalItems.OrderBy(item => item.Name).ToList();
+        }
+    }
+
+    [HarmonyPatch(typeof(CollectionCanvasController), "OnDropdownValueChangedCallback")]
+    public static class OnlyShowModdedItems
+    {
+        public static void Postfix(ref CollectionCanvasController __instance, ref List<Item> ___AlphabeticalItems, TMP_Dropdown change, ref bool ___OnlyShowNewItems, ref bool ___OnlyShowUnlockedItems, ref bool ___OnlyShowUnlockableItems, ref int ____pageNumber, ref List<Item> ____itemsToDisplay, ref int ____totalPages)
+        {
+            try
+            {
+                if (change.value == 4)
+                {
+                    bool isAnotherList = ___OnlyShowNewItems || ___OnlyShowUnlockableItems || ___OnlyShowUnlockedItems;
+
+                    Log.LogInfo(change.value);
+
+                    if (!isAnotherList) return;
+
+                    ___OnlyShowNewItems = false;
+                    ___OnlyShowUnlockableItems = false;
+                    ___OnlyShowUnlockedItems = false;
+
+                    ____pageNumber = 1;
+                    GameStatics.LastCollectionPageViewed = 1;
+                    ____itemsToDisplay = ___AlphabeticalItems.Where(item => item is ModdedItem).ToList();
+                    ____totalPages = (int)Mathf.Ceil((float)____itemsToDisplay.Count / 8f);
+
+                    __instance.Populate();
+                }
+            }
+            catch (System.Exception e)
+            {
+                Log.LogFatal(e);
+            }
         }
     }
 

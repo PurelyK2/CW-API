@@ -1,4 +1,5 @@
-﻿using HarmonyLib;
+﻿using CWAPI.Utilities;
+using HarmonyLib;
 using nickeltin;
 using nickeltin.SDF;
 using nickeltin.SDF.Runtime;
@@ -7,11 +8,14 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Reflection.Emit;
 using System.Text;
 using System.Threading.Tasks;
+using TMPro;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Scripting;
+using static CWAPI.Tiles.ModdedTileType;
 
 namespace CWAPI.Items;
 
@@ -21,6 +25,7 @@ public abstract class ModdedItem : Item
     public abstract string SpritePath { get; }
     public virtual Sprite ItemSprite { get; private set; }
     public virtual SDFSpriteMetadataAsset ItemSDFSprite { get; private set; }
+    public virtual bool IsUnlocked => true;
 
     public ModdedItem()
     {
@@ -94,6 +99,73 @@ public abstract class ModdedItem : Item
             newMetadata.SourceSprite = ShouldSwapSDF.Item2;
 
             ____metadata = newMetadata;
+        }
+    }
+
+    [HarmonyPatch(typeof(GameStatics), "IsUnlockRequired")]
+    public static class OverrideUnlockStuff
+    {
+        public static void Postfix(Type itemType, ref bool __result)
+        {
+            if(itemType.IsSubclassOf(typeof(ModdedItem)))
+            {
+                ModdedItem item = ItemUtils.ModdedItems.FirstOrDefault(item => item.GetType() == itemType);
+                __result = item.IsUnlocked;
+            }
+        }
+    }
+
+    //Fix Populating Collection Cards For Pins
+    [HarmonyPatch(typeof(CollectionCard), "Populate")]
+    public static class LockedCardPopulatePatch
+    {
+        [HarmonyTranspiler]
+        public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
+        {
+            // 1. Target the .Find method call on the generic list
+            // This is the exact moment the game finishes its LINQ search and returns the Character
+            MethodInfo listFindMethod = AccessTools.Method(typeof(List<Character>), nameof(List<Character>.Find));
+            MethodInfo hookMethod = AccessTools.Method(typeof(LockedCardPopulatePatch), nameof(LockedCardPopulatePatch.GetCharacter));
+
+            var matcher = new CodeMatcher(instructions);
+
+            // 2. Find the moment the game finds its vanilla character
+            matcher.MatchStartForward(new CodeMatch(OpCodes.Callvirt, listFindMethod));
+
+            if (matcher.IsValid)
+            {
+                // 3. Move exactly 1 instruction past 'Callvirt Find' so the Character is on top of the stack
+                matcher.Advance(1);
+
+                // 4. Inject our hook. At this point, the stack contains [Character]
+                matcher.InsertAndAdvance(
+                    new CodeInstruction(OpCodes.Ldarg_1),          // Load 'Item item' parameter onto the stack
+                    new CodeInstruction(OpCodes.Call, hookMethod)  // Calls GetCharacter(originalCharacter, item)
+                );
+            }
+            else
+            {
+                Log.LogInfo("Couldn't Find Patch Spot For Character Interception via List.Find");
+            }
+
+            return matcher.InstructionEnumeration();
+        }
+
+        // Keep this signature exactly as is!
+        static Character GetCharacter(Character original, Item item)
+        {
+            Log.LogInfo("Getting Character From Full Characters List Instead");
+
+            Character character = CharacterUtils.FullCharactersList.FirstOrDefault(c => c.GetCharacterItem()?.GetType() == item?.GetType());
+
+            if (character != null)
+            {
+                Log.LogInfo("Pin Character: " + character.GetName());
+                return character;
+            }
+
+            Log.LogError("Error: Character is null");
+            return original; // Safely fall back to the vanilla character if our lookup fails
         }
     }
 }
