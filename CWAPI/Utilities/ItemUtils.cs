@@ -66,11 +66,7 @@ public static class ItemUtils
             {
                 if (change.value == 4)
                 {
-                    bool isAnotherList = ___OnlyShowNewItems || ___OnlyShowUnlockableItems || ___OnlyShowUnlockedItems;
-
                     Log.LogInfo(change.value);
-
-                    if (!isAnotherList) return;
 
                     ___OnlyShowNewItems = false;
                     ___OnlyShowUnlockableItems = false;
@@ -87,6 +83,21 @@ public static class ItemUtils
             catch (System.Exception e)
             {
                 Log.LogFatal(e);
+            }
+        }
+    }
+    [HarmonyPatch(typeof(SaveManager), "IsItemUnlocked", [typeof(Type)])]
+    public static class ProperlyLockItemViz
+    {
+        public static void Postfix(Type itemType, ref bool __result)
+        {
+            if(itemType.IsSubclassOf(typeof(ModdedItem)))
+            {
+                ModdedItem item = ItemUtils.ModdedItems.FirstOrDefault(i => i.GetType() == itemType);
+
+                if (item == null) return;
+
+                __result = item.IsUnlocked;
             }
         }
     }
@@ -156,8 +167,6 @@ public static class ItemUtils
                     }
                     else
                         Log.LogError("Item Not Found Even In Modded Items");
-
-                    return;
                 }
             }
         }

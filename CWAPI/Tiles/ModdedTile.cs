@@ -285,7 +285,60 @@ public abstract class ModdedTileType
         }
     }
 
+    //Add to available colors
+    [HarmonyPatch(typeof(RunProgress), MethodType.Constructor)]
+    public static class AddToAvailableStartColors
+    {
+        public static void Postfix(ref RunProgress __instance)
+        {
+            foreach(ModdedTileType tileType in TileUtils.ModdedTileTypes)
+            {
+                if(!tileType.isXenocolor && !__instance.AvailableColours.Contains(tileType.tileType))
+                {
+                    __instance.AvailableColours.Add(tileType.tileType);
+                }
+            }
+        }
+    }
+
     //===============================SCARY IL ZONE========================
+    [HarmonyPatch(typeof(RunProgress), nameof(RunProgress.GetNewTileColour))]
+    public static class ModifyTileListPatch
+    {
+        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
+        {
+            // Safely grab our custom injector method info
+            MethodInfo injectorMethod = AccessTools.Method(
+                typeof(ModifyTileListPatch),
+                nameof(InjectCustomTiles)
+            );
+
+            if (injectorMethod == null)
+            {
+                throw new NullReferenceException("[ModifyTileListPatch] Failed to find InjectCustomTiles method.");
+            }
+
+            var matcher = new CodeMatcher(instructions).MatchStartForward(new CodeMatch(op => op.opcode == OpCodes.Call && op.operand is MethodInfo mi && mi.Name == "ToList"));
+
+            matcher.Advance(1).Insert(
+                    new CodeInstruction(OpCodes.Call, injectorMethod)
+                );
+            return matcher.InstructionEnumeration();
+        }
+
+        // This catches the List<TileType> from the stack, alters it, and returns it
+        public static List<TileType> InjectCustomTiles(List<TileType> originalList)
+        {
+            // Add your custom logic or tile elements here
+            if (!originalList.Contains(TileType.Purple))
+            {
+                originalList.Add(TileType.Purple);
+            }
+
+            return originalList;
+        }
+    }
+
     [HarmonyPatch(typeof(ScoreCalculation), "CalculateOverallScore", new Type[] {typeof(List<TileSelection>), typeof(List<string>), typeof(List<Item>), typeof(List<HistoricWord>), typeof(List<BossModifier>), typeof(GridData), typeof(int)})]
     public static class ApplyModdedTileBonuses
     {

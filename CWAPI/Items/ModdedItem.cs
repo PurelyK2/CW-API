@@ -25,7 +25,13 @@ public abstract class ModdedItem : Item
     public abstract string SpritePath { get; }
     public virtual Sprite ItemSprite { get; private set; }
     public virtual SDFSpriteMetadataAsset ItemSDFSprite { get; private set; }
-    public virtual bool IsUnlocked => true;
+
+    internal bool isUnlocked = false;
+    public bool IsUnlocked => CheckUnlocked();
+    public virtual bool CheckUnlocked()
+    {
+        return isUnlocked;
+    }
 
     public ModdedItem()
     {

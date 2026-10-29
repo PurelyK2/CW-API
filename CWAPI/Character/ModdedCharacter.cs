@@ -19,7 +19,12 @@ public abstract class ModdedCharacter : Character
 {
     public virtual Sprite CharacterSprite => null;
     public virtual RuntimeAnimatorController CharacterAnimator => null;
-    public virtual bool IsUnlocked => true;
+    internal bool isUnlocked = false;
+    public bool IsUnlocked => CheckUnlocked();
+    public virtual bool CheckUnlocked()
+    {
+        return isUnlocked;
+    }
     public ModdedCharacter(string name, string steamAchievementName, string description, Item characterItem, string artFileName, Color uiColorA, Color uiColorB, Vector3 endScreenVictoryOffset, Vector3 endScreenDefeatOffset, List<Type> goodIntroItemTypes, Emotions myEmotion, bool isSecret = false, string secretUnlockCondition = "") : base(name, steamAchievementName, description, characterItem, artFileName, uiColorA, uiColorB, endScreenVictoryOffset, endScreenDefeatOffset, goodIntroItemTypes, myEmotion, isSecret, secretUnlockCondition)
     {
     }

@@ -4,6 +4,7 @@ global using Random = UnityEngine.Random;
 using BepInEx;
 using BepInEx.Bootstrap;
 using BepInEx.Logging;
+using CWAPI.Saves;
 using CWAPI.Utilities;
 using HarmonyLib;
 using System;
@@ -72,6 +73,7 @@ public class Plugin : BaseUnityPlugin
         TileUtils.PopulateModdedTileTypes();
         CharacterUtils.PopulateModdedCharacters();
         ChallengeUtils.PopulateModdedChallenges();
+        ModdedSaveManager.InitiateModdedSaveFiles();
     }
     void Update()
     {
